@@ -1,11 +1,30 @@
 #include "TinyFamily.h"
+#include "TinyTool.h"
 #include <limits>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <assert.h>
 
-int main()
+void Test_StringToIndex()
+{
+    int32_t index = 0;
+
+    index = string_to_index("index_xxx_01");
+    assert(index == 0);
+    index = string_to_index("index_xxxx_02");
+    assert(index == 1);
+    index = string_to_index("index_xxxxxxx_03");
+    assert(index == 2);
+    index = string_to_index("index_xxxxx_04");
+    assert(index == 3);
+    index = string_to_index("index_xxxxxxx_05");
+    assert(index == 4);
+    index = string_to_index("index_xxxxxxxxxx_06");
+    assert(index == 5);
+}
+
+void Test_TinySmooth()
 {
     {
         TinySmooth< int, 5 > ts_int_5;
@@ -141,6 +160,11 @@ int main()
         delete[] arr;
         arr = NULL;
     }
+}
 
+int main()
+{
+    Test_TinySmooth();
+    Test_StringToIndex();
     return 0;
 }
