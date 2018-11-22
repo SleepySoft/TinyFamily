@@ -79,36 +79,71 @@ int32_t move_compare(const char* str, uint32_t* offset, uint32_t length, const c
 
 static char string_index_buffer[STRING_INDEX_BUFFER_LEN] = { 0 };
 
+static const uint32_t STAT_COMPARE = 0;
+static const uint32_t STAT_GONEXT = 1;
+static const uint32_t STAT_COPY = 2;
+static const uint32_t STAT_DONE = 3;
+
 int32_t string_to_index(const char* str)
 {
-    int32_t index = 0;
-    uint32_t offset = 0;
-    size_t length = 0;
-    do 
+    int32_t index = ((str && str[0]) ? 0 : -1);
+    uint32_t state = ((string_index_buffer[0] == '\0') ? STAT_COPY : STAT_COMPARE);
+    uint32_t offset = 0, compare = 0;
+    while (str && str[0])
     {
-        if (move_compare(string_index_buffer, &offset, STRING_INDEX_BUFFER_LEN, str))
-        {
-            break;
-        }
         if (offset >= STRING_INDEX_BUFFER_LEN - 1)
         {
             index = -1;
             break;
         }
-        ++index;
-        if (string_index_buffer[offset] == '\0')
+        if (state == STAT_COMPARE)
         {
-            length = strlen(str);
-            if (offset + length + 2 >= STRING_INDEX_BUFFER_LEN)
+            if (string_index_buffer[offset] != str[compare])
             {
-                index = -1;
+                compare = 0;
+                state = STAT_GONEXT;
+            }
+            else if (str[compare] == '\0')
+            {
                 break;
             }
-            strcpy(string_index_buffer + offset, str);
-            string_index_buffer[offset + length + 1] = '\0';
-            break;
+            else
+            {
+                ++compare;
+            }
         }
-    } while (offset < STRING_INDEX_BUFFER_LEN);
+        if (state == STAT_GONEXT)
+        {
+            if (string_index_buffer[offset] == '\0')
+            {
+                if (string_index_buffer[offset + 1] == '\0')
+                {
+                    if (offset + 1 + strlen(str) >= STRING_INDEX_BUFFER_LEN - 1)
+                    {
+                        index = -1;
+                        break;
+                    }
+                    state = STAT_COPY;
+                }
+                else
+                {
+                    state = STAT_COMPARE;
+                }
+                ++index;
+            }
+        }
+        else if (state == STAT_COPY)
+        {
+            string_index_buffer[offset] = str[compare];
+            if (str[compare] == '\0')
+            {
+                string_index_buffer[offset + 1] = 0;
+                break;
+            }
+            ++compare;
+        }
+        ++offset;
+    }
     return index;
 }
 

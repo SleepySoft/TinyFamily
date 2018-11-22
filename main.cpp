@@ -19,9 +19,24 @@ void Test_StringToIndex()
     index = string_to_index("index_xxxxx_04");
     assert(index == 3);
     index = string_to_index("index_xxxxxxx_05");
-    assert(index == 4);
+    assert(index == -1);
     index = string_to_index("index_xxxxxxxxxx_06");
-    assert(index == 5);
+    assert(index == -1);
+
+    index = string_to_index("index_xxx_01");
+    assert(index == 0);
+    index = string_to_index("index_xxxx_02");
+    assert(index == 1);
+    index = string_to_index("index_xxxxxxx_03");
+    assert(index == 2);
+    index = string_to_index("index_xxxxx_04");
+    assert(index == 3);
+    index = string_to_index("index_xxxxxxx_05");
+    assert(index == -1);
+    index = string_to_index("in");
+    assert(index == 4);
+    index = string_to_index("in");
+    assert(index == 4);
 }
 
 void Test_TinySmooth()
