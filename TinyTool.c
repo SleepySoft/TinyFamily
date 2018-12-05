@@ -112,6 +112,74 @@ int32_t string_to_index(const char* str)
     return index;
 }
 
+
+#define rb_access(ctx, pos) ctx->m_data[(pos) % ctx->m_length]
+
+int8_t rb_readable(struct ring_buffer_ctx* ctx, uint32_t pos)
+{
+    return (pos < ctx->m_wPos);
+}
+
+uint32_t rb_len(struct ring_buffer_ctx* ctx)
+{
+    return ctx->m_wPos - ctx->m_rPos;
+}
+void rb_put(struct ring_buffer_ctx* ctx, uint8_t val)
+{
+    rb_access(ctx, ctx->m_wPos++) = val;
+    if (ctx->m_wPos - ctx->m_rPos > ctx->m_length) { ctx->m_rPos = ctx->m_wPos - ctx->m_length; }
+    if (ctx->m_rPos > ctx->threshold) { ctx->m_wPos -= ctx->threshold; ctx->m_rPos -= ctx->threshold; }
+}
+uint8_t rb_get(struct ring_buffer_ctx* ctx)
+{
+    return rb_readable(ctx, ctx->m_rPos) ? rb_access(ctx, ctx->m_rPos) : 0;
+}
+uint8_t rb_peek(struct ring_buffer_ctx* ctx, uint32_t offset)
+{
+    uint32_t pos = ctx->m_rPos + offset;
+    return rb_readable(ctx, pos) ? rb_access(ctx, pos) : 0;
+}
+
+
+uint32_t ring_buffer_len(struct ring_buffer_ctx* ctx)
+{
+    return rb_len(ctx);
+}
+
+void ring_buffer_put(struct ring_buffer_ctx* ctx, uint8_t* buffer, uint32_t len)
+{
+    for (uint32_t i = 0; i < len; ++i)
+    {
+        rb_put(ctx, buffer[i]);
+    }
+}
+
+uint32_t ring_buffer_get(struct ring_buffer_ctx* ctx, uint8_t* buffer, uint32_t len)
+{
+    uint32_t i = 0;
+    for ( ; i < len; ++i)
+    {
+        if (rb_len(ctx) > 0)
+        {
+            buffer[i] = rb_get(ctx);
+        }
+        else
+        {
+            break;
+        }
+    }
+    return i;
+}
+
+void ring_buffer_init(struct ring_buffer_ctx* ctx, uint8_t* buffer, uint32_t len)
+{
+    ctx->m_data = buffer;
+    ctx->m_rPos = 0;
+    ctx->m_wPos = 0;
+    ctx->m_length = len;
+    ctx->threshold = len * 8;
+}
+
 #ifdef __cplusplus
 }
 #endif
