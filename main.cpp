@@ -177,9 +177,73 @@ void Test_TinySmooth()
     }
 }
 
+void Test_Ringbuffer_C()
+{
+    uint32_t testDataLen = 10000000;
+    uint32_t testBufferLen = 99;
+
+    uint8_t* mainBuffer = new uint8_t[testBufferLen];
+    uint8_t* randomBuffer = new uint8_t[testDataLen];
+    uint8_t* compareBuffer = new uint8_t[testDataLen];
+
+    ring_buffer_ctx rb_ctx;
+    ring_buffer_init(&rb_ctx, mainBuffer, testBufferLen);
+
+    srand((unsigned)time(NULL));
+
+    for (uint32_t i = 0; i < testDataLen; ++i)
+    {
+        randomBuffer[i] = (uint8_t)(UINT8_MAX * rand() / RAND_MAX);
+    }
+
+    uint32_t posW = 0;
+    uint32_t posR = 0;
+    uint32_t posC = 0;
+    uint32_t dataLen = 0;
+    uint32_t freeLen = 0;
+    uint32_t randomWLen = 0;
+    uint32_t randomRLen = 0;
+
+    while ((posW < testDataLen) || (posR < testDataLen))
+    {
+        freeLen = testBufferLen - ring_buffer_len(&rb_ctx);
+        if ((freeLen > 0) && (posW < testDataLen))
+        {
+            randomWLen = (uint32_t)((rand() % (freeLen - 1 + 1)) + 1);
+            if (randomWLen + posW >= testDataLen)
+            {
+                randomWLen = testDataLen - posW;
+            }
+            ring_buffer_put(&rb_ctx, randomBuffer + posW, randomWLen);
+            posW += randomWLen;
+        }
+
+        dataLen = ring_buffer_len(&rb_ctx);
+        if ((dataLen > 0) && (posR < testDataLen))
+        {
+            randomRLen = (uint32_t)((rand() % (dataLen - 1 + 1)) + 1);
+            if (randomRLen + posR >= testDataLen)
+            {
+                randomRLen = testDataLen - posR;
+            }
+            ring_buffer_get(&rb_ctx, compareBuffer + posR, randomRLen);
+            posR += randomRLen;
+        }
+        for ( ; posC < posR; ++posC)
+        {
+            assert(randomBuffer[posC] == compareBuffer[posC]);
+        }
+    }
+
+    delete[] mainBuffer; mainBuffer = NULL;
+    delete[] randomBuffer; randomBuffer = NULL;
+    delete[] compareBuffer; compareBuffer = NULL;
+}
+
 int main()
 {
     Test_TinySmooth();
     Test_StringToIndex();
+    Test_Ringbuffer_C();
     return 0;
 }

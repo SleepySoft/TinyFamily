@@ -40,6 +40,11 @@ uint32_t string_queue_get(struct string_queue_context* ctx, char* data, uint32_t
 #define STRING_INDEX_BUFFER_LEN 64
 int32_t string_to_index(const char* str);
 
+
+/*---------------------------------------------------------*/
+/*  Ring Buffer of C version                               */
+/*---------------------------------------------------------*/
+
 struct ring_buffer_ctx
 {
     uint8_t* m_data;
