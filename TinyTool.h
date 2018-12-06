@@ -54,6 +54,9 @@ struct ring_buffer_ctx
     uint32_t threshold;
 };
 
+#define RING_BUFFER_STATIC_INIT(buffer) { buffer, 0, 0, sizeof(buffer), sizeof(buffer) * 8 }
+
+void ring_buffer_clear(struct ring_buffer_ctx* ctx);
 uint32_t ring_buffer_len(struct ring_buffer_ctx* ctx);
 void ring_buffer_put(struct ring_buffer_ctx* ctx, uint8_t* buffer, uint32_t len);
 uint32_t ring_buffer_get(struct ring_buffer_ctx* ctx, uint8_t* buffer, uint32_t len);
