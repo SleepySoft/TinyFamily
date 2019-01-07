@@ -2,8 +2,8 @@
 #include "TinyTool.h"
 #include <limits>
 #include <time.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <assert.h>
 
 void Test_StringToIndex()
@@ -177,6 +177,69 @@ void Test_TinySmooth()
     }
 }
 
+void Test_Ringbuffer()
+{
+    uint32_t testDataLen = 10000000;
+    uint32_t testBufferLen = 99;
+
+    uint8_t* mainBuffer = new uint8_t[testBufferLen];
+    uint8_t* randomBuffer = new uint8_t[testDataLen];
+    uint8_t* compareBuffer = new uint8_t[testDataLen];
+
+    TinyCircularBuffer ringbuffer(999);
+
+    srand((unsigned)time(NULL));
+
+    for (uint32_t i = 0; i < testDataLen; ++i)
+    {
+        randomBuffer[i] = (uint8_t)(UINT8_MAX * rand() / RAND_MAX);
+    }
+
+    uint32_t posW = 0;
+    uint32_t posR = 0;
+    uint32_t posC = 0;
+    uint32_t dataLen = 0;
+    uint32_t freeLen = 0;
+    uint32_t randomWLen = 0;
+    uint32_t randomRLen = 0;
+
+    while ((posW < testDataLen) || (posR < testDataLen))
+    {
+        freeLen = ringbuffer.capacity() - ringbuffer.length();
+        if ((freeLen > 0) && (posW < testDataLen))
+        {
+            randomWLen = (uint32_t)((rand() % (freeLen - 1 + 1)) + 1);
+            if (randomWLen + posW >= testDataLen)
+            {
+                randomWLen = testDataLen - posW;
+            }
+            ringbuffer.write(randomBuffer + posW, randomWLen);
+            posW += randomWLen;
+        }
+
+        dataLen = ringbuffer.length();
+        if ((dataLen > 0) && (posR < testDataLen))
+        {
+            randomRLen = (uint32_t)((rand() % (dataLen - 1 + 1)) + 1);
+            if (randomRLen + posR >= testDataLen)
+            {
+                randomRLen = testDataLen - posR;
+            }
+            uint32_t readed = ringbuffer.read(compareBuffer + posR, randomRLen);
+            assert(readed == randomRLen);
+            posR += randomRLen;
+        }
+        for (; posC < posR; ++posC)
+        {
+            assert(randomBuffer[posC] == compareBuffer[posC]);
+        }
+    }
+
+    delete[] mainBuffer; mainBuffer = NULL;
+    delete[] randomBuffer; randomBuffer = NULL;
+    delete[] compareBuffer; compareBuffer = NULL;
+}
+
 void Test_Ringbuffer_C()
 {
     uint32_t testDataLen = 10000000;
@@ -243,7 +306,18 @@ void Test_Ringbuffer_C()
 int main()
 {
     Test_TinySmooth();
+    printf("Test_TinySmooth \t\t\t\t\t| PASS |\n");
+
+    Test_Ringbuffer();
+    printf("Test_Ringbuffer \t\t\t\t\t| PASS |\n");
+
     Test_StringToIndex();
+    printf("Test_StringToIndex \t\t\t\t\t| PASS |\n");
+
     Test_Ringbuffer_C();
+    printf("Test_Ringbuffer_C \t\t\t\t\t| PASS |\n");
+
+    printf("Test of TinyFamily \t\t\t\t\t| ALL PASSED |");
+
     return 0;
 }
