@@ -303,6 +303,105 @@ void Test_Ringbuffer_C()
     delete[] compareBuffer; compareBuffer = NULL;
 }
 
+
+void __gen_pos_array(uint64_t* posArr, uint64_t count, uint64_t lower, uint64_t upper)
+{
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        uint64_t randomVal = (uint64_t)((rand() << 48) | (rand() << 32) | (rand() << 16) | rand());
+        posArr[i] = (randomVal % (upper - lower)) + lower;
+    }
+}
+
+#define BF_OP_SET 1
+#define BF_OP_CLR 2
+void __bit_field_op(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint8_t op)
+{
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        if (op == BF_OP_SET)
+        {
+            tbf.bitSet(posArr[i]);
+        }
+        else if (op == BF_OP_CLR)
+        {
+            tbf.bitClr(posArr[i]);
+        }
+        else
+        {
+            assert(false);
+        }
+    }
+}
+
+#define BF_CHK_SET 3
+#define BF_CHK_CLR 4
+void __bit_field_check(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint8_t op)
+{
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        if (op == BF_CHK_SET)
+        {
+            assert(tbf.bitCheck(posArr[i]));
+        }
+        else if (op == BF_CHK_CLR)
+        {
+            assert(!tbf.bitCheck(posArr[i]));
+        }
+    }
+}
+#define BF_CHK_OR 15
+#define BF_CHK_AND 16
+#define BF_CHK_XOR 17
+void __bit_field_check(TinyBitField& tbf, uint64_t* posArr1, uint64_t* posArr2, uint64_t count, uint8_t op)
+{
+}
+
+void Test_BitField_SetClr()
+{
+    const uint64_t TEST_BIT_COUT = 1000000;
+    const uint64_t TOTAL_BIT_COUT = 100000000;
+
+    TinyBitField tbf1(TOTAL_BIT_COUT);
+    TinyBitField tbf2(TOTAL_BIT_COUT);
+    uint64_t* setPos = new uint64_t[TEST_BIT_COUT];
+    uint64_t* clrPos = new uint64_t[TEST_BIT_COUT];
+
+    assert(tbf1.allZero());
+    assert(tbf2.allZero());
+
+    srand((unsigned)time(NULL));
+
+    __gen_pos_array(setPos, TEST_BIT_COUT, 0, TOTAL_BIT_COUT);
+    __bit_field_op(tbf1, setPos, TEST_BIT_COUT, BF_OP_SET);
+    __bit_field_check(tbf1, setPos, TEST_BIT_COUT, BF_CHK_SET);
+
+    __bit_field_op(tbf1, clrPos, TEST_BIT_COUT, BF_OP_CLR);
+    __bit_field_check(tbf1, clrPos, TEST_BIT_COUT, BF_CHK_CLR);
+
+    __bit_field_op(tbf1, setPos, TEST_BIT_COUT, BF_OP_CLR);
+    assert(tbf1.allZero());
+
+    __gen_pos_array(clrPos, TEST_BIT_COUT, 0, TOTAL_BIT_COUT);
+    __bit_field_op(tbf2, clrPos, TEST_BIT_COUT, BF_OP_CLR);
+    __bit_field_check(tbf2, clrPos, TEST_BIT_COUT, BF_CHK_CLR);
+
+    __bit_field_op(tbf2, setPos, TEST_BIT_COUT, BF_OP_SET);
+    __bit_field_check(tbf2, setPos, TEST_BIT_COUT, BF_CHK_SET);
+
+    __bit_field_op(tbf2, setPos, TEST_BIT_COUT, BF_OP_CLR);
+    assert(tbf1.allZero());
+
+    //TinyBitField tbf_or(tbf1 & tbf2);
+    //__bit_field_check(tbf_or, setPos, TEST_BIT_COUT, BF_CHK_SET);
+
+    //TinyBitField tbf_and(tbf1 & tbf2);
+    //__bit_field_check(tbf_and, clrPos, TEST_BIT_COUT, BF_CHK_CLR);
+
+    delete[] setPos; setPos = NULL;
+    delete[] clrPos; clrPos = NULL;
+}
+
 int main()
 {
     Test_TinySmooth();
@@ -316,6 +415,9 @@ int main()
 
     Test_Ringbuffer_C();
     printf("Test_Ringbuffer_C \t\t\t\t\t| PASS |\n");
+
+    Test_BitField_SetClr();
+    printf("Test_BitField \t\t\t\t\t\t| PASS |\n");
 
     printf("Test of TinyFamily \t\t\t\t\t| ALL PASSED |");
 

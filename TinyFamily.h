@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <memory.h>
 
 
 /*****************************************************************************/
@@ -87,6 +88,7 @@ protected:
 /*****************************************************************************/
 /*                                                                           */
 /*                            class TinyRingBuffer                           */
+/*                         A Circular Object Buffer                          */
 /*                                                                           */
 /*****************************************************************************/
 
@@ -105,6 +107,14 @@ public:
     }
     virtual ~TinyRingBuffer() { };
 };
+
+
+/*****************************************************************************/
+/*                                                                           */
+/*                            class TinyRingBuffer                           */
+/*                         A Circular Memory Buffer                          */
+/*                                                                           */
+/*****************************************************************************/
 
 class TinyCircularBuffer : public TinyRingBufferShell< uint8_t >
 {
@@ -135,6 +145,14 @@ public:
 };
 
 
+/*****************************************************************************/
+/*                                                                           */
+/*                             class TinySmooth                              */
+/*               N-Point smooth, specify SIZE as smooth points.              */
+/*                           Based on ring buffer                            */
+/*                                                                           */
+/*****************************************************************************/
+
 template< class T, uint32_t SIZE >
 class TinySmooth
 {
@@ -160,6 +178,89 @@ public:
     }
 };
 
+
+/*****************************************************************************/
+/*                                                                           */
+/*                             class TinyBitField                            */
+/*                A class to help you manage billons of bits.                */
+/*                 Currently do not support shift operation.                 */
+/*          Warning: The C++ memory function may not support uint64          */
+/*                                                                           */
+/*****************************************************************************/
+
+#define SIZETYPE uint64_t
+
+class TinyBitField
+{
+protected:
+    uint8_t* m_bitField;
+    SIZETYPE m_capacity;
+    SIZETYPE m_fieldlen;
+public:
+    TinyBitField(SIZETYPE capacity) : m_bitField(NULL), m_capacity(0) { init(capacity); }
+    TinyBitField(const TinyBitField& rhs) : m_bitField(NULL), m_capacity(0) { operator=(rhs); }
+    ~TinyBitField() { destroy(); }
+
+    TinyBitField& operator=(const TinyBitField& rhs) {
+        if (rhs.m_bitField != NULL) {
+            init(rhs.m_capacity);
+            memcpy(m_bitField, rhs.m_bitField, rhs.m_fieldlen);
+        } else {
+            destroy();
+        }
+        return *this;
+    }
+
+    bool init(SIZETYPE capacity) { 
+        destroy();
+        m_capacity = capacity; m_fieldlen = capacity / 8 + 1;
+        m_bitField = new uint8_t[m_fieldlen];
+        memset(m_bitField, 0, m_fieldlen);
+        return true;
+    }
+    bool destroy() { delete[] m_bitField; m_bitField = NULL; m_fieldlen = m_capacity = 0;  return true; };
+
+    bool allZero() const { uint8_t sum = 0; for (SIZETYPE i = 0; i < m_fieldlen; ++i) { sum |= m_bitField[i]; } return sum == 0; }
+    void zeroAll() { for (SIZETYPE i = 0; i < m_fieldlen; ++i) { m_bitField[i] = 0; } }
+
+    void bitSet(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] |= (uint8_t)1 << (bit % 8); } }
+    void bitClr(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] &= ~((uint8_t)1 << (bit % 8)); } }
+    uint8_t bitGet(SIZETYPE bit) { return bitCheck(bit) ? 1 : 0; }
+    bool bitCheck(SIZETYPE bit)  { return bitValidation(bit) ? (m_bitField[bit / 8] & ((uint8_t)1 << (bit % 8))) != 0 : false; }
+
+    operator bool() const { return !allZero(); }
+
+    TinyBitField& not() { for (SIZETYPE i = 0; i < m_capacity / 8 + 1; ++i) { m_bitField[i] = ~m_bitField[i]; } return *this; }
+    TinyBitField& xor(const TinyBitField& rhs) { forEachItem(do_xor, rhs); return *this; }
+    TinyBitField& and(const TinyBitField& rhs) { forEachItem(do_and, rhs); return *this; }
+    TinyBitField& or (const TinyBitField& rhs) { forEachItem(do_or, rhs); return *this; }
+
+    TinyBitField& operator ~ () { return TinyBitField(*this).not(); }
+    TinyBitField& operator ^ (const TinyBitField& rhs) { return TinyBitField(*this).xor(rhs); }
+    TinyBitField& operator & (const TinyBitField& rhs) { return TinyBitField(*this).and(rhs); }
+    TinyBitField& operator | (const TinyBitField& rhs) { return TinyBitField(*this).or (rhs); }
+
+protected:
+    TinyBitField& operator << (SIZETYPE offset) { return *this; }
+    TinyBitField& operator >> (SIZETYPE offset) { return *this; }
+protected:
+    bool bitValidation(SIZETYPE bit) { return (m_bitField != NULL) && (bit < m_capacity); }
+    void forEachItem(uint8_t(*calc)(uint8_t, uint8_t), const TinyBitField& rhs) {
+        SIZETYPE minSize = (m_capacity / 8 + 1) < (rhs.m_capacity / 8 + 1) ? (m_capacity / 8 + 1) : (rhs.m_capacity / 8 + 1);
+        for (SIZETYPE i = 0; i < minSize; ++i) { m_bitField[i] = calc(m_bitField[i], rhs.m_bitField[i]); }
+    }
+    static uint8_t do_or(uint8_t lhs, uint8_t rhs) { return lhs | rhs; }
+    static uint8_t do_xor(uint8_t lhs, uint8_t rhs) { return lhs ^ rhs; }
+    static uint8_t do_and(uint8_t lhs, uint8_t rhs) { return lhs & rhs; }
+};
+
+
+/*****************************************************************************/
+/*                                                                           */
+/*                              class TinyMask                               */
+/*              An easy way to add/remove/judgement 32bit mask.              */
+/*                                                                           */
+/*****************************************************************************/
 
 struct TinyMask
 {
