@@ -219,7 +219,8 @@ class TinyBitField : public TinyBitFieldShell
 protected:
     SIZETYPE m_fieldlen;
 public:
-    TinyBitField(SIZETYPE capacity) : TinyBitFieldShell(NULL, 0) { init(capacity); }
+    TinyBitField() : TinyBitFieldShell(NULL, 0), m_fieldlen(0) { }
+    TinyBitField(SIZETYPE capacity) : TinyBitFieldShell(NULL, 0), m_fieldlen(0){ init(capacity); }
     ~TinyBitField() { destroy(); }
 
     bool init(SIZETYPE capacity) { destroy();
@@ -257,15 +258,6 @@ public:
         }
         return *this;
     }
-
-    bool init(SIZETYPE capacity) { 
-        destroy();
-        m_capacity = capacity; m_fieldlen = capacity / 8 + 1;
-        m_bitField = new uint8_t[m_fieldlen];
-        memset(m_bitField, 0, m_fieldlen);
-        return true;
-    }
-    bool destroy() { delete[] m_bitField; m_bitField = NULL; m_fieldlen = m_capacity = 0;  return true; };
 
     bool allZero() const { uint8_t sum = 0; for (SIZETYPE i = 0; i < m_fieldlen; ++i) { sum |= m_bitField[i]; } return sum == 0; }
     void zeroAll() { for (SIZETYPE i = 0; i < m_fieldlen; ++i) { m_bitField[i] = 0; } }
