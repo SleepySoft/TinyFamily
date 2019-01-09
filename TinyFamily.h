@@ -181,27 +181,74 @@ public:
 
 /*****************************************************************************/
 /*                                                                           */
-/*                             class TinyBitField                            */
-/*                A class to help you manage billons of bits.                */
-/*                 Currently do not support shift operation.                 */
-/*          Warning: The C++ memory function may not support uint64          */
+/*                          class TinyBitFieldShell                          */
+/*            A tiny class to help you manage large count of bits.           */
+/*  NOTE: The buffer must fit the capacity (buffer size >= capacity / 8).    */
+/*  WRANING: The C++ memory function may not support uint64 for memory size. */
 /*                                                                           */
 /*****************************************************************************/
 
-#define SIZETYPE uint64_t
+#define SIZETYPE uint32_t
 
-class TinyBitField
+class TinyBitFieldShell
 {
 protected:
     uint8_t* m_bitField;
     SIZETYPE m_capacity;
+public:
+    TinyBitFieldShell(uint8_t* buffer, SIZETYPE capacity) : m_bitField(buffer), m_capacity(capacity) { }
+    virtual ~TinyBitFieldShell() { }
+
+    void bitSet(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] |= (uint8_t)1 << (bit % 8); } }
+    void bitClr(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] &= ~((uint8_t)1 << (bit % 8)); } }
+    uint8_t bitGet(SIZETYPE bit) { return bitCheck(bit) ? 1 : 0; }
+    bool bitCheck(SIZETYPE bit) { return bitValidation(bit) ? (m_bitField[bit / 8] & ((uint8_t)1 << (bit % 8))) != 0 : false; }
+protected:
+    bool bitValidation(SIZETYPE bit) { return (m_bitField != NULL) && (bit < m_capacity); }
+};
+
+
+/*****************************************************************************/
+/*                                                                           */
+/*                            class TinyBitField                             */
+/*                                                                           */
+/*****************************************************************************/
+
+class TinyBitField : public TinyBitFieldShell
+{
+protected:
     SIZETYPE m_fieldlen;
 public:
-    TinyBitField(SIZETYPE capacity) : m_bitField(NULL), m_capacity(0) { init(capacity); }
-    TinyBitField(const TinyBitField& rhs) : m_bitField(NULL), m_capacity(0) { operator=(rhs); }
+    TinyBitField(SIZETYPE capacity) : TinyBitFieldShell(NULL, 0) { init(capacity); }
     ~TinyBitField() { destroy(); }
 
-    TinyBitField& operator=(const TinyBitField& rhs) {
+    bool init(SIZETYPE capacity) { destroy();
+        if (capacity > 0) {
+            m_capacity = capacity; m_fieldlen = capacity / 8 + 1;
+            m_bitField = new uint8_t[m_fieldlen];
+            memset(m_bitField, 0, m_fieldlen);
+        }
+        return true;
+    }
+    bool destroy() { delete[] m_bitField; m_bitField = NULL; m_fieldlen = m_capacity = 0;  return true; };
+};
+
+
+/*****************************************************************************/
+/*                                                                           */
+/*                              class BitField                               */
+/*                      Original design. Kind of heavy.                      */
+/*                Maybe we should remove it form Tiny Family.                */
+/*****************************************************************************/
+
+class BitField : public TinyBitField
+{
+public:
+    BitField(SIZETYPE capacity) : TinyBitField(capacity){ }
+    BitField(const BitField& rhs) : TinyBitField(0) { operator=(rhs); }
+    ~BitField() { }
+
+    BitField& operator=(const BitField& rhs) {
         if (rhs.m_bitField != NULL) {
             init(rhs.m_capacity);
             memcpy(m_bitField, rhs.m_bitField, rhs.m_fieldlen);
@@ -223,29 +270,23 @@ public:
     bool allZero() const { uint8_t sum = 0; for (SIZETYPE i = 0; i < m_fieldlen; ++i) { sum |= m_bitField[i]; } return sum == 0; }
     void zeroAll() { for (SIZETYPE i = 0; i < m_fieldlen; ++i) { m_bitField[i] = 0; } }
 
-    void bitSet(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] |= (uint8_t)1 << (bit % 8); } }
-    void bitClr(SIZETYPE bit) { if (bitValidation(bit)) { m_bitField[bit / 8] &= ~((uint8_t)1 << (bit % 8)); } }
-    uint8_t bitGet(SIZETYPE bit) { return bitCheck(bit) ? 1 : 0; }
-    bool bitCheck(SIZETYPE bit)  { return bitValidation(bit) ? (m_bitField[bit / 8] & ((uint8_t)1 << (bit % 8))) != 0 : false; }
-
     operator bool() const { return !allZero(); }
 
-    TinyBitField& not() { for (SIZETYPE i = 0; i < m_capacity / 8 + 1; ++i) { m_bitField[i] = ~m_bitField[i]; } return *this; }
-    TinyBitField& xor(const TinyBitField& rhs) { forEachItem(do_xor, rhs); return *this; }
-    TinyBitField& and(const TinyBitField& rhs) { forEachItem(do_and, rhs); return *this; }
-    TinyBitField& or (const TinyBitField& rhs) { forEachItem(do_or, rhs); return *this; }
+    BitField& not() { for (SIZETYPE i = 0; i < m_capacity / 8 + 1; ++i) { m_bitField[i] = ~m_bitField[i]; } return *this; }
+    BitField& xor(const BitField& rhs) { forEachItem(do_xor, rhs); return *this; }
+    BitField& and(const BitField& rhs) { forEachItem(do_and, rhs); return *this; }
+    BitField& or (const BitField& rhs) { forEachItem(do_or, rhs); return *this; }
 
-    TinyBitField& operator ~ () { return TinyBitField(*this).not(); }
-    TinyBitField& operator ^ (const TinyBitField& rhs) { return TinyBitField(*this).xor(rhs); }
-    TinyBitField& operator & (const TinyBitField& rhs) { return TinyBitField(*this).and(rhs); }
-    TinyBitField& operator | (const TinyBitField& rhs) { return TinyBitField(*this).or (rhs); }
+    BitField& operator ~ () { return BitField(*this).not(); }
+    BitField& operator ^ (const BitField& rhs) { return BitField(*this).xor(rhs); }
+    BitField& operator & (const BitField& rhs) { return BitField(*this).and(rhs); }
+    BitField& operator | (const BitField& rhs) { return BitField(*this).or (rhs); }
 
 protected:
-    TinyBitField& operator << (SIZETYPE offset) { return *this; }
-    TinyBitField& operator >> (SIZETYPE offset) { return *this; }
+    BitField& operator << (SIZETYPE offset) { return *this; }
+    BitField& operator >> (SIZETYPE offset) { return *this; }
 protected:
-    bool bitValidation(SIZETYPE bit) { return (m_bitField != NULL) && (bit < m_capacity); }
-    void forEachItem(uint8_t(*calc)(uint8_t, uint8_t), const TinyBitField& rhs) {
+    void forEachItem(uint8_t(*calc)(uint8_t, uint8_t), const BitField& rhs) {
         SIZETYPE minSize = (m_capacity / 8 + 1) < (rhs.m_capacity / 8 + 1) ? (m_capacity / 8 + 1) : (rhs.m_capacity / 8 + 1);
         for (SIZETYPE i = 0; i < minSize; ++i) { m_bitField[i] = calc(m_bitField[i], rhs.m_bitField[i]); }
     }

@@ -304,18 +304,19 @@ void Test_Ringbuffer_C()
 }
 
 
-void __gen_pos_array(uint64_t* posArr, uint64_t count, uint64_t lower, uint64_t upper)
+void __gen_pos_array(uint32_t* posArr, uint32_t count, uint32_t lower, uint32_t upper)
 {
     for (uint32_t i = 0; i < count; ++i)
     {
-        uint64_t randomVal = (uint64_t)((rand() << 48) | (rand() << 32) | (rand() << 16) | rand());
-        posArr[i] = (randomVal % (upper - lower)) + lower;
+        //uint32_t randomVal = (uint32_t)((rand() << 48) | (rand() << 32) | (rand() << 16) | rand());
+        //posArr[i] = (randomVal % (upper - lower)) + lower;
+        posArr[i] = rand();
     }
 }
 
 #define BF_OP_SET 1
 #define BF_OP_CLR 2
-void __bit_field_op(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint8_t op)
+void __bit_field_op(TinyBitField& tbf, uint32_t* posArr, uint32_t count, uint8_t op)
 {
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -336,7 +337,7 @@ void __bit_field_op(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint8_t
 
 #define BF_CHK_SET 3
 #define BF_CHK_CLR 4
-void __bit_field_check(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint8_t op)
+void __bit_field_check(TinyBitField& tbf, uint32_t* posArr, uint32_t count, uint8_t op)
 {
     for (uint32_t i = 0; i < count; ++i)
     {
@@ -353,19 +354,19 @@ void __bit_field_check(TinyBitField& tbf, uint64_t* posArr, uint64_t count, uint
 #define BF_CHK_OR 15
 #define BF_CHK_AND 16
 #define BF_CHK_XOR 17
-void __bit_field_check(TinyBitField& tbf, uint64_t* posArr1, uint64_t* posArr2, uint64_t count, uint8_t op)
+void __bit_field_check(TinyBitField& tbf, uint32_t* posArr1, uint32_t* posArr2, uint32_t count, uint8_t op)
 {
 }
 
 void Test_BitField_SetClr()
 {
-    const uint64_t TEST_BIT_COUT = 1000000;
-    const uint64_t TOTAL_BIT_COUT = 100000000;
+    const uint32_t TEST_BIT_COUT = 1000000;
+    const uint32_t TOTAL_BIT_COUT = 100000000;
 
-    TinyBitField tbf1(TOTAL_BIT_COUT);
-    TinyBitField tbf2(TOTAL_BIT_COUT);
-    uint64_t* setPos = new uint64_t[TEST_BIT_COUT];
-    uint64_t* clrPos = new uint64_t[TEST_BIT_COUT];
+    BitField tbf1(TOTAL_BIT_COUT);
+    BitField tbf2(TOTAL_BIT_COUT);
+    uint32_t* setPos = new uint32_t[TEST_BIT_COUT];
+    uint32_t* clrPos = new uint32_t[TEST_BIT_COUT];
 
     assert(tbf1.allZero());
     assert(tbf2.allZero());
